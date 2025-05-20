@@ -1,0 +1,190 @@
+#include <FastLED.h>
+#include "lcdgfx.h"  // Bibliothèque pour l'écran OLED
+
+#define DATA_PIN 3
+#define NUM_LEDS 256
+#define BRIGHTNESS 100
+
+CRGB leds[NUM_LEDS];
+
+#define COLOR_UNITE CRGB::Red
+#define COLOR_DIZAINE CRGB::Blue
+#define COLOR_CENTAINE CRGB::Green
+#define COLOR_ERREUR CRGB::Red
+
+int reponseEntree = -1;
+
+struct Calcul {
+  const char* operation;
+  int resultat;
+};
+
+Calcul calculs[] = {
+  {"1 + 2", 3}, {"4 + 3", 7}, {"5 + 5", 10}, {"6 + 2", 8}, {"9 + 1", 10},
+  {"7 + 2", 9}, {"8 + 3", 11}, {"10 + 5", 15}, {"3 + 6", 9}, {"2 + 2", 4},
+  {"1 + 9", 10}, {"0 + 7", 7}, {"5 + 4", 9}, {"2 + 8", 10}, {"6 + 6", 12}
+};
+
+const int nbCalculs = sizeof(calculs) / sizeof(calculs[0]);
+int calculActuel = 0;
+bool afficherNouveauCalcul = true;
+bool enAttenteDeReponse = false;
+
+// Initialisation de l'écran OLED I2C
+DisplaySSD1306_128x64_I2C display(-1);
+
+void setup() {
+  Serial.begin(9600);
+  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
+  FastLED.setBrightness(BRIGHTNESS);
+  clearLEDs();
+
+  // Initialisation de l'écran
+  display.begin();
+  display.fill(0x00);
+  display.setFixedFont(ssd1306xled_font6x8);
+  display.printFixed(0, 0, "📚 C'est parti !", STYLE_BOLD);
+  delay(2000);
+  display.clear();
+}
+
+void loop() {
+  if (afficherNouveauCalcul && calculActuel < nbCalculs) {
+    afficherOperation(calculs[calculActuel].operation);
+    afficherNouveauCalcul = false;
+    enAttenteDeReponse = true;
+  }
+
+  if (enAttenteDeReponse) {
+    int entree = lireClavier();
+
+    if (entree >= 0 && entree <= 9) {
+      reponseEntree = reponseEntree == -1 ? entree : (reponseEntree * 10 + entree);
+      Serial.print("Réponse actuelle : ");
+      Serial.println(reponseEntree);
+
+      afficherReponseOLED(reponseEntree);  // Affiche sur l'écran OLED
+    } else if (entree == 99) {  // Touche 'v' pour valider
+      if (reponseEntree == calculs[calculActuel].resultat) {
+        Serial.println("Bravo tu es un champion !");
+        afficherMessageOLED("Bravo tu es un champion !");
+        afficherResultat(reponseEntree);
+        delay(3000);
+        clearLEDs();
+        calculActuel++;
+        afficherNouveauCalcul = true;
+        enAttenteDeReponse = false;
+        reponseEntree = -1;
+      } else {
+        Serial.println("Mauvaise réponse, tu peux reessayer!");
+        afficherMessageOLED("Mauvaise reponse, tu peux reessayer !");
+        clignoterErreur();
+        reponseEntree = -1;
+        afficherReponseOLED(reponseEntree);
+      }
+    } else if (entree == 88) {  // Touche 'c' pour corriger
+      reponseEntree = -1;
+      Serial.println("🔄 Réponse réinitialisée.");
+      afficherMessageOLED("🔄 Reinitialisee !");
+      delay(1000);
+      afficherOperation(calculs[calculActuel].operation); // Rafraîchit l'opération
+    }
+  }
+}
+
+int lireClavier() {
+  if (Serial.available() > 0) {
+    char c = Serial.read();
+    if (c >= '0' && c <= '9') {
+      return c - '0';
+    } else if (c == 'v' || c == 'V') {
+      return 99;  // Valider
+    } else if (c == 'c' || c == 'C') {
+      return 88;  // Corriger
+    }
+  }
+  return -1;
+}
+
+// 🔢 Affiche l'opération sur OLED
+void afficherOperation(String op) {
+  Serial.println("🧮 Calcul : " + op);
+  display.clear();
+  display.setFixedFont(ssd1306xled_font6x8);
+  display.printFixed(0, 0, "Quel est le resultat?", STYLE_BOLD);
+  display.printFixed(0, 16, op.c_str(), STYLE_NORMAL);
+
+  for (int i = 0; i < 10; i++) {
+    leds[i] = CRGB::White;
+  }
+  FastLED.show();
+  delay(1000);
+  clearLEDs();
+}
+
+// 🔤 Affiche la réponse tapée
+void afficherReponseOLED(int valeur) {
+  display.printFixed(0, 32, "                    ", STYLE_NORMAL); // Nettoie ligne
+  if (valeur != -1) {
+    String txt = "Reponse: " + String(valeur);
+    display.printFixed(0, 32, txt.c_str(), STYLE_BOLD);
+  }
+}
+
+// ✅❌ Affiche message général sur OLED
+void afficherMessageOLED(const char* msg) {
+  display.printFixed(0, 48, "                    ", STYLE_NORMAL); // Nettoie ligne
+  display.printFixed(0, 48, msg, STYLE_BOLD);
+}
+
+void clignoterErreur() {
+  for (int i = 0; i < 3; i++) {
+    fill_solid(leds, NUM_LEDS, COLOR_ERREUR);
+    FastLED.show();
+    delay(300);
+    clearLEDs();
+    delay(300);
+  }
+}
+
+void afficherResultat(int nombre) {
+  int centaines = nombre / 100;
+  int dizaines = (nombre % 100) / 10;
+  int unites = nombre % 10;
+
+  clearLEDs();
+  int index = 0;
+
+  // CENTAINES
+  if (centaines > 0) {
+    for (int y = 0; y < 10; y++) {
+      for (int x = 0; x < 10; x++) {
+        int pos = y * 16 + x;
+        if (pos < NUM_LEDS) leds[pos] = COLOR_CENTAINE;
+      }
+    }
+  }
+
+  index = 100;
+
+  // DIZAINES
+  for (int d = 0; d < dizaines; d++) {
+    for (int i = 0; i < 10; i++) {
+      if (index + i < NUM_LEDS) leds[index + i] = COLOR_DIZAINE;
+    }
+    index += 16;
+  }
+
+  // UNITÉS
+  index = 240;
+  for (int i = 0; i < unites; i++) {
+    if (index + i < NUM_LEDS) leds[index + i] = COLOR_UNITE;
+  }
+
+  FastLED.show();
+}
+
+void clearLEDs() {
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
+}
