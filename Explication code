@@ -1,1 +1,48 @@
-                                                      Explication du code : 
+# Explication du code : 
+
+
+## Initialisation :
+
+#define DATA_PIN 3
+#define NUM_LEDS 256
+#define BRIGHTNESS 100
+CRGB leds[NUM_LEDS];
+Cette partie du code permet la déclaration d'un ruban LED, connecté à la broche D3. La luminosité est limitée à 100.
+
+DisplaySSD1306_128x64_I2C display(-1);
+C'est la création d'un objet pour un écran OLED 128x64 pixels.
+
+
+## Structure des calculs : 
+
+struct Calcul {
+  const char* operation;
+  int resultat;
+};
+
+Calcul calculs[] = {
+  {"1 + 2", 3}, {"4 + 3", 7}, ...
+};
+C'est le tableau de calculs avec leur résultat attendu. Cela permet à l'élève de répondre à tour de rôle à chaque calcul.
+
+## Setup : 
+
+FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
+FastLED.setBrightness(BRIGHTNESS);
+display.begin(); ...
+Cela permet d'initialiser les LED et l'écran OLED. Il affiche "c'est parti!" pendant deux secondes.
+
+## Fonctionnement principal : 
+
+if (afficherNouveauCalcul && calculActuel < nbCalculs) {
+  afficherOperation(calculs[calculActuel].operation);
+}
+Il affiche les nouveaux calculs 
+
+int entree = lireClavier();  // via Serial
+
+- touches '0' à '9' : entrées numériques
+- 'v' : valider
+- 'c' : corriger (effacer)
+Il permet la lecture de l'entrée utilisateur.
+
