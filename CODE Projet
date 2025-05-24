@@ -43,7 +43,7 @@ void setup() {
   display.begin();
   display.fill(0x00);
   display.setFixedFont(ssd1306xled_font6x8);
-  display.printFixed(0, 0, "📚 C'est parti !", STYLE_BOLD);
+  display.printFixed(0, 0, "C'est parti !", STYLE_BOLD);
   delay(2000);
   display.clear();
 }
@@ -84,8 +84,8 @@ void loop() {
       }
     } else if (entree == 88) {  // Touche 'c' pour corriger
       reponseEntree = -1;
-      Serial.println("🔄 Réponse réinitialisée.");
-      afficherMessageOLED("🔄 Reinitialisee !");
+      Serial.println("Réponse réinitialisée.");
+      afficherMessageOLED("Reinitialisee !");
       delay(1000);
       afficherOperation(calculs[calculActuel].operation); // Rafraîchit l'opération
     }
@@ -108,7 +108,7 @@ int lireClavier() {
 
 //  Affiche l'opération sur OLED
 void afficherOperation(String op) {
-  Serial.println("🧮 Calcul : " + op);
+  Serial.println("Calcul : " + op);
   display.clear();
   display.setFixedFont(ssd1306xled_font6x8);
   display.printFixed(0, 0, "Quel est le resultat?", STYLE_BOLD);
