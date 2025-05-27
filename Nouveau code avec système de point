@@ -96,7 +96,7 @@ void loop() {
 
       else if (entree == 88) { // Corriger
         reponseEntree = -1;
-        afficherMessageOLED("↩️ Corrige !");
+        afficherMessageOLED(" Corrige !");
         delay(1000);
         afficherOperation(calculs[calculActuel].operation);
       }
